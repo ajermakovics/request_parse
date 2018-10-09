@@ -1,6 +1,7 @@
 const express = require('express');
+const request = require('request');
+const fs = require('fs');
 var app = express();
-var port = 3000;
 var dateFormat = require('dateformat');
 
 /*
@@ -13,8 +14,46 @@ app.get('/*.pom', (req, res) =>{
 
   var param_string = req.params[0];
   var jsonobj = getJson(param_string);
-  res.send(jsonobj);
+
+  var data = {
+      //method: 'POST',
+      url: readSetting('post_req_url'),
+      headers: {
+          'Content-Type': 'application/json'
+      },
+      json:true,
+      body: jsonobj
+
+  };
+
+  request.post(data, function(err, resp, body){
+    if (err){
+      console.log(err);
+      res.send('error');
+    }else{
+      console.log(data);
+      console.log(body);
+      res.send('fine');
+    }
+  });
 });
+
+
+var readSetting = (setting) => {
+  try{
+    var notesString = fs.readFileSync('config.json');
+    var jsonString = JSON.parse(notesString);
+    if (setting =='port'){
+      return jsonString.port;
+    }else if (setting == 'post_req_url'){
+      console.log('json post request url ' , jsonString.port);
+      return jsonString.post_req_url;
+    }
+  }catch(e){
+    console.log(e);
+  }
+  return '';
+}
 
 var getJson = (param_string) => {
   var array_of_vals = param_string.split('/')
@@ -31,13 +70,13 @@ var getJson = (param_string) => {
     version: version,
     date: dateFormat(now, 'yyyymmdd')
   }
-  console.log(jsonobj);
+  //console.log(jsonobj);
   return jsonobj;
 }
-app.get('/users/:userId/books/:bookId', function (req, res) {
-  res.send(req.params)
-})
 
-app.listen(port, ()=>{
-  console.log(`Server is up and listening on the port ${port}`);
+app.listen(readSetting('port'), ()=>{
+  console.log(`Server is up and listening on the port ${readSetting('port')}`);
 });
+module.exports = {
+  readSetting
+}
