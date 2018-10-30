@@ -3,6 +3,7 @@ const request = require('request');
 const fs = require('fs');
 var app = express();
 var dateFormat = require('dateformat');
+var mongo = require('./mongo-update');
 
 /*
   request looks like this:
@@ -10,44 +11,42 @@ var dateFormat = require('dateformat');
   outgoing response should be like
   {"group": "com.github.jitpack", "artifact": "proj", "version": "1.0", "date": "20181003"}
 */
+console.log(readSetting);
+MongoClient = require('mongodb').MongoClient;
+
+
+let clientPromise = MongoClient.connect(readSetting('mongo_db'));
+
+
 app.get('/*.pom', (req, res) =>{
 
   var param_string = req.params[0];
   var jsonobj = getJson(param_string);
-
-  var data = {
-      //method: 'POST',
-      url: readSetting('post_req_url'),
-      headers: {
-          'Content-Type': 'application/json'
-      },
-      json:true,
-      body: jsonobj
-
-  };
-
-  request.post(data, function(err, resp, body){
-    if (err){
-      console.log(err);
-      res.send('error');
-    }else{
-      console.log(data);
-      console.log(body);
-      res.send('fine');
-    }
-  });
-});
+  clientPromise
+    .then((client) => {
+      let db = client.db('Downloads')
+      mongo.logJSSONtoDB(jsonobj, db) 
+      }
+    )
+  res.send("Done");
+  }
+);
 
 
-var readSetting = (setting) => {
+function readSetting (setting) {
   try{
     var notesString = fs.readFileSync('config.json');
     var jsonString = JSON.parse(notesString);
+    
     if (setting =='port'){
       return jsonString.port;
+      console.log('json request port ' , jsonString.port);
     }else if (setting == 'post_req_url'){
-      console.log('json post request url ' , jsonString.port);
+      console.log('json post request url ' , jsonString.post_req_url);
       return jsonString.post_req_url;
+    }else if (setting == 'mongo_db') {
+      console.log('json mongo_db url ' , jsonString.mongo_db);
+      return jsonString.mongo_db;
     }
   }catch(e){
     console.log(e);
@@ -73,6 +72,8 @@ var getJson = (param_string) => {
   //console.log(jsonobj);
   return jsonobj;
 }
+
+
 
 app.listen(readSetting('port'), ()=>{
   console.log(`Server is up and listening on the port ${readSetting('port')}`);
