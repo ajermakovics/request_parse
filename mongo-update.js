@@ -13,15 +13,14 @@
     }
 }*/
 
-
-var logJSONtoDB = (jsonObj, mongo_db) => {
-    var id_group = jsonObj.group;
-    var date = jsonObj.date;
-    var collection = mongo_db.collection("Downloads");
+function logJSONtoDB(artifact, collection) {
+    var id = artifact.group  + ":" + artifact.name;
+    var date = artifact.date;
     var key = 'downloads.' +[date];
-    collection.findOneAndUpdate(                 
+    
+    collection.updateOne(                 
         {   
-            _id: id_group
+            _id: id 
         },
         { 
             $inc: { 
@@ -32,11 +31,9 @@ var logJSONtoDB = (jsonObj, mongo_db) => {
             returnOriginal: false,
             upsert: true
         }
-    ).then((results_from_increment) => {
-        console.log('Results of the increment: ');
-        console.log(results_from_increment);
-    }).catch((error_) =>{
-        console.log('Error from the increment', error_);
+    ).then((res) => {
+    }).catch((error) =>{
+        console.log('Error from the increment', error);
     });       
 }
 module.exports.logJSSONtoDB = logJSONtoDB;
