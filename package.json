@@ -12,6 +12,7 @@
     "dateformat": "^3.0.3",
     "express": "^4.16.0",
     "mongodb": "^3.1.8",
+    "mongoose": "^5.3.8",
     "request": "^2.88.0"
   }
 }

@@ -24,8 +24,8 @@ app.get('/*.pom', (req, res) =>{
   var jsonobj = getJson(param_string);
   clientPromise
     .then((client) => {
-      let db = client.db('Downloads')
-      mongo.logJSSONtoDB(jsonobj, db) 
+      let db = client.db('Downloads');
+      mongo.logJSSONtoDB(jsonobj, db);
       }
     )
   res.send("Done");
