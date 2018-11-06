@@ -9,6 +9,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "date-and-time": "^0.6.3",
+    "date_and_time": "^1.0.0",
     "dateformat": "^3.0.3",
     "express": "^4.16.0",
     "mongodb": "^3.1.8",

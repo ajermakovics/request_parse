@@ -3,7 +3,7 @@ const request = require('request');
 const fs = require('fs');
 var app = express();
 var dateFormat = require('dateformat');
-var mongo = require('./mongo-update');
+var mongo = require('./mongo-db-requests');
 
 /*
   request looks like this:
@@ -30,6 +30,26 @@ app.get('/*.pom', (req, res) =>{
   }
 );
 
+app.get('/downloads/*', (req, res) => {
+    let param_string = req.params[0];
+    let artifact_group = param_string.substr(0, param_string.indexOf('/'));
+    var artifact_name = param_string.substr(param_string.indexOf('/') + 1, param_string.length);
+
+    var artifact = {
+      group: artifact_group,
+      name: artifact_name
+    }
+    collPromise.then((coll) => {
+    mongo.getWeeklyMonthlyStatistics(artifact, coll).
+    then((counts) => {
+      console.log('counts ', counts);
+    });
+    
+    
+    }).catch((err) => console.log(err)
+    )
+    res.send('Done');
+});
 
 function readSetting (setting) {
   try{
