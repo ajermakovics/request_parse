@@ -14,12 +14,16 @@ let date_time = require('date-and-time');
     }
 }*/
 
+/** @return Promise **/
 function logJSONtoDB(artifact, collection) {
     var id = artifact.group  + ":" + artifact.name;
+    if(artifact.version)
+        id = id + ':' + artifact.version
+
     var date = artifact.date;
     var key = 'downloads.' +[date];
     
-    collection.updateOne(                 
+    return collection.updateOne(
         {   
             _id: id 
         },
@@ -32,8 +36,7 @@ function logJSONtoDB(artifact, collection) {
             returnOriginal: false,
             upsert: true
         }
-    ).then((res) => {
-    }).catch((error) =>{
+    ).catch((error) =>{
         console.log('Error from the increment', error);
     });       
 }
@@ -47,46 +50,56 @@ Return JSON:
 }
 */
 
-function getWeeklyMonthlyStatistics (artifact, collection){
+const DAYS_IN_MS =  24 * 60 * 60 * 1000;
+const SEVEN_DAYS_IN_MILLISECONDS =  7 * DAYS_IN_MS;
+const THIRTY_DAYS_IN_MILLISECONDS =  30 * DAYS_IN_MS;
+
+function getWeeklyMonthlyStatistics (artifact, collection) {
     let id = artifact.group + ":" + artifact.name;
+
+    if(artifact.version)
+        id = id + ':' + artifact.version
+
     return collection.findOne({_id: id})
-    .then((res) => 
-        {
-            return getWeeklyMonthlyCount(res);
+        .then((res) => {
+            return getWeeklyMonthlyCount(res || {});
         })
-    .catch((error) => {
+        .catch((error) => {
             return error;     
         })
-        
 }
 
-function getWeeklyMonthlyCount(data) {
+function getWeeklyMonthlyCount(doc) {
 
-    var keys = Object.keys(data.downloads);
+    let downloads = doc["downloads"] || {}
     var last_7_days_download_count = 0;
     var last_30_days_download_count = 0;
-    for (var key in keys) {
-        var date = keys[key]; 
-        var count = data.downloads[keys[key]];
-       
+    let now = new Date();
+
+    for (var date in downloads) {
+        var count = downloads[date] || 0;
+
         var download_date_string = date_time.parse(date, 'YYYYMMDD');
-        let now = new Date();
+
         //difference between now and the date in milliseconds 
         var diff_in_milliseconds = now - download_date_string;
-        const SEVEN_DAYS_IN_MILLISECONDS =  7 * 24 * 60 * 60 * 1000;
-        const THIRTY_DAYS_IN_MILLISECONDS =  30 * 24 * 60 * 60 * 1000;
+
         //checks if the download date is within 7 or 30 days range
         if (diff_in_milliseconds<= SEVEN_DAYS_IN_MILLISECONDS){
             last_7_days_download_count += count;
         }
-        if (diff_in_milliseconds <=THIRTY_DAYS_IN_MILLISECONDS){
+        if (diff_in_milliseconds <= THIRTY_DAYS_IN_MILLISECONDS){
             last_30_days_download_count += count;
         }
+        //else {
+        //    break;
+        //}
     }
-    var count_json = {
+    let count_json = {
         week: last_7_days_download_count,
         month: last_30_days_download_count
     }
+
     return count_json;
 }
 module.exports.logJSSONtoDB = logJSONtoDB;

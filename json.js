@@ -1,80 +1,66 @@
 const express = require('express');
-const request = require('request');
 const fs = require('fs');
-var app = express();
-var dateFormat = require('dateformat');
-var mongo = require('./mongo-db-requests');
+let expressMetrics = require('express-metrics');
+let dateFormat = require('dateformat');
+let mongo = require('./mongo-db-requests');
+let MongoClient = require('mongodb').MongoClient;
 
-/*
-  request looks like this:
-  com/github/user/proj/1.0/proj-1.0.pom
-  outgoing response should be like
-  {"group": "com.github.user", "artifact": "proj", "version": "1.0", "date": "20181003"}
-*/
+let app = express();
+let settings = JSON.parse(fs.readFileSync('config.json'));
 
-MongoClient = require('mongodb').MongoClient;
-
-let collPromise = MongoClient.connect(readSetting('mongo_db'))
+let collPromise = MongoClient.connect(settings.mongo_db)
   .then((client) => client.db('Downloads'))
-  .then( (db) => db.collection("Downloads") )
+  .then( (db) => db.collection("Downloads") );
 
-app.get('/*.pom', (req, res) =>{
+app.use(expressMetrics({
+    port: 8091
+}));
 
-  var param_string = req.params[0];
-  var artifact = getArtifact(param_string);
-  collPromise.then((coll) => {
-      mongo.logJSSONtoDB(artifact, coll);
-      }
-    )
-  res.send("Done");
-  }
-);
+app.post('/downloads/*/*/*', (req, res) => {
+    let artifact = getArtifact(req.params);
+    let artifactNoVer = {
+        group: artifact.group,
+        name: artifact.name,
+        date: artifact.date
+    };
 
-app.get('/downloads/*', (req, res) => {
-    let param_string = req.params[0];
-    let artifact_group = param_string.substr(0, param_string.indexOf('/'));
-    var artifact_name = param_string.substr(param_string.indexOf('/') + 1, param_string.length);
+    collPromise.then((coll) =>
+          mongo.logJSSONtoDB(artifact, coll)
+                .then((res) => mongo.logJSSONtoDB(artifactNoVer, coll))
+    ).catch((err) => console.log(err))
 
-    var artifact = {
-      group: artifact_group,
-      name: artifact_name
-    }
-    collPromise.then((coll) => {
-    mongo.getWeeklyMonthlyStatistics(artifact, coll).
-    then((counts) => {
-      console.log('counts ', counts);
-    });
-    
-    
-    }).catch((err) => console.log(err)
-    )
-    res.send('Done');
+    res.send();
 });
 
-function readSetting (setting) {
-  try{
-    var notesString = fs.readFileSync('config.json');
-    var jsonString = JSON.parse(notesString);
-    
-    if (setting =='port'){
-      return jsonString.port;
+app.get('/downloads/*/*/*', (req, res) => {
+    let artifact = getArtifact(req.params)
+    sendStats(res, artifact);
+});
 
-    }else if (setting == 'post_req_url'){
-      return jsonString.post_req_url;
-    }else if (setting == 'mongo_db') {
-      return jsonString.mongo_db;
-    }
-  }catch(e){
-    console.log(e);
-  }
-  return '';
+app.get('/downloads/*/*', (req, res) => {
+    let artifact = getArtifact(req.params)
+    sendStats(res, artifact);
+});
+
+function sendStats(res, artifact) {
+    console.log("getting stats", artifact)
+
+    collPromise.then((coll) => {
+        mongo.getWeeklyMonthlyStatistics(artifact, coll).then((counts) => {
+            console.log("sending", counts)
+            res.send(counts);
+        });
+    }).catch((err) => {
+        console.log(err)
+        res.send("{}")
+    })
 }
 
-function getArtifact(param_string) {
-  var array_of_vals = param_string.split('/')
-  var group = `${array_of_vals[0]}.${array_of_vals[1]}.${array_of_vals[2]}`;
-  var name = array_of_vals[3];
-  var version = array_of_vals[4];
+// com.github.user/repo/version
+function getArtifact(params) {
+  var group = params[0];
+  var name = params[1];
+  var version = params[2];
   var now = new Date();
   
   const artifact = {
@@ -87,9 +73,10 @@ function getArtifact(param_string) {
   return artifact;
 }
 
-app.listen(readSetting('port'), ()=>{
-  console.log(`Server is up and listening on the port ${readSetting('port')}`);
+app.listen(settings.port, ()=>{
+  console.log(`Server is up and listening on the port ${settings.port}`);
+  collPromise.then((db) => console.log("Connected to db"));
 });
 module.exports = {
-  readSetting
+
 }
