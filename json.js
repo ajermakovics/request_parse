@@ -43,11 +43,8 @@ app.get('/downloads/*/*', (req, res) => {
 });
 
 function sendStats(res, artifact) {
-    console.log("getting stats", artifact)
-
     collPromise.then((coll) => {
         mongo.getWeeklyMonthlyStatistics(artifact, coll).then((counts) => {
-            console.log("sending", counts)
             res.send(counts);
         });
     }).catch((err) => {
@@ -75,7 +72,8 @@ function getArtifact(params) {
 
 app.listen(settings.port, ()=>{
   console.log(`Server is up and listening on the port ${settings.port}`);
-  collPromise.then((db) => console.log("Connected to db"));
+  collPromise.then((db) => console.log("Connected to db"))
+      .catch((err) => console.error("DB error", err) );
 });
 module.exports = {
 
