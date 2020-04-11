@@ -27,7 +27,7 @@ app.post('/downloads/*/*/*', (req, res) => {
     collPromise.then((coll) =>
           mongo.logJSSONtoDB(artifact, coll)
                 .then((res) => mongo.logJSSONtoDB(artifactNoVer, coll))
-    ).catch((err) => console.log(err))
+    ).catch((err) => console.log("POST downloads err", err))
 
     res.send();
 });
@@ -48,7 +48,7 @@ function sendStats(res, artifact) {
             res.send(counts);
         });
     }).catch((err) => {
-        console.log(err)
+        console.log("sendStats error", err)
         res.send("{}")
     })
 }

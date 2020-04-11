@@ -15,7 +15,7 @@ function logJSONtoDB(artifact, collection) {
         { returnOriginal: false,  upsert: true }
     ).catch((error) =>{
         console.log('Error from the increment', error);
-    });       
+    });
 }
 
 function incDoc(collection, id, date, amount) {
@@ -46,7 +46,6 @@ const THIRTY_DAYS_IN_MILLISECONDS =  30 * DAYS_IN_MS;
 
 /** @param {Collection} collection **/
 async function mergeDuplicates (collection) {
-    console.log("collection: ", collection.dbName)
     var cnt = 0;
 
     let cursor = collection.find({"migrated": null}, {sort: {"_id": 1}})
@@ -55,7 +54,7 @@ async function mergeDuplicates (collection) {
         var doc = await cursor.next(); // Promise<doc>
         var realId = doc._id.toLowerCase()
         if(realId !== doc._id) {
-            console.log("doc", cnt, doc._id, " != ", realId)
+
             for(var date in doc.downloads) {
                 await incDoc(collection, realId, date, doc.downloads[date])
             }
@@ -63,8 +62,6 @@ async function mergeDuplicates (collection) {
             cnt++
         }
     }
-
-    console.log("done: ", cnt)
 }
 
 function getWeeklyMonthlyStatistics (artifact, collection) {
